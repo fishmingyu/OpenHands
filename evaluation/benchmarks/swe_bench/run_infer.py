@@ -52,10 +52,33 @@ def _get_swebench_workspace_dir_name(instance: pd.Series) -> str:
     return f'{instance.repo}__{instance.version}'.replace('/', '__')
 
 
+def _get_search_input_json(metadata: EvalMetadata) -> dict | None:
+    try:
+        with open(metadata.details['search_input'], 'r') as f:
+            logger.info(
+                f'Loading search input JSON from {metadata.details["search_input"]}'
+            )
+            return json.load(f)
+    except Exception as e:
+        logger.error(f'Failed to load search input JSON: {e}')
+        return None
+
+
+def _process_bug_locations(search_bug_locations: dict, repo_path: str) -> None:
+    logger.info(f'Search bug_locations: {search_bug_locations}')
+    for x in search_bug_locations:
+        x['file_path'] = os.path.join(repo_path, x['file_path'])
+
+
 def get_instruction(instance: pd.Series, metadata: EvalMetadata):
     workspace_dir_name = _get_swebench_workspace_dir_name(instance)
+    # Prepare search input
+    search_input = _get_search_input_json(metadata)
+    search_instance_hint = search_input[instance['instance_id']]
+    search_observation_result = search_instance_hint['observation']
+    search_bug_locations = search_instance_hint['bug_locations']
+    _process_bug_locations(search_bug_locations, f'/workspace/{workspace_dir_name}')
     # Prepare instruction
-
     # Instruction based on Anthropic's official trajectory
     # https://github.com/eschluntz/swe-bench-experiments/tree/main/evaluation/verified/20241022_tools_claude-3-5-sonnet-updated/trajs
     instruction = (
@@ -69,8 +92,18 @@ def get_instruction(instance: pd.Series, metadata: EvalMetadata):
         'Can you help me implement the necessary changes to the repository so that the requirements specified in the <pr_description> are met?\n'
         "I've already taken care of all changes to any of the test files described in the <pr_description>. This means you DON'T have to modify the testing logic or any of the tests in any way!\n"
         'Your task is to make the minimal changes to non-tests files in the /workspace directory to ensure the <pr_description> is satisfied.\n'
+        'Also, I have already preprocessed highly-possible bug locations and an observation from previous search process. '
+        'These are provided to help you understand the issue better and help you faster locate the bug.\n'
+        'Here are the details:\n'
+        '<bug_locations>\n'
+        f'{json.dumps(search_bug_locations)}\n'
+        '</bug_locations>\n'
+        'Preprocessed observation from the search tool below.\n'
+        '<observation>\n'
+        f'{search_observation_result}\n'
+        '</observation>\n'
         'Follow these steps to resolve the issue:\n'
-        '1. As a first step, it might be a good idea to explore the repo to familiarize yourself with its structure.\n'
+        '1. As a first step, it might be a good idea to explore the repo to familiarize yourself with its structure. Please attach great importance to the <bug_locations> and <observation> in your exploration.\n'
         '2. Create a script to reproduce the error and execute it with `python <filename.py>` using the BashTool, to confirm the error\n'
         '3. Edit the sourcecode of the repo to resolve the issue\n'
         '4. Rerun your reproduce script and confirm that the error is fixed!\n'
@@ -485,6 +518,12 @@ if __name__ == '__main__':
         default='test',
         help='split to evaluate on',
     )
+    parser.add_argument(
+        '--search_input',
+        type=str,
+        default='../../evaluation/output.json',
+        help='Path to the search input file',
+    )
     args, _ = parser.parse_known_args()
 
     # NOTE: It is preferable to load datasets from huggingface datasets and perform post-processing
@@ -503,7 +542,7 @@ if __name__ == '__main__':
     if llm_config is None:
         raise ValueError(f'Could not find LLM config: --llm_config {args.llm_config}')
 
-    details = {}
+    details = {'search_input': args.search_input}
     _agent_cls = openhands.agenthub.Agent.get_cls(args.agent_cls)
 
     dataset_descrption = (

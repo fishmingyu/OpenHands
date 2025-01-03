@@ -6,12 +6,13 @@ source "evaluation/utils/version_control.sh"
 MODEL_CONFIG=$1
 COMMIT_HASH=$2
 AGENT=$3
-EVAL_LIMIT=$4
-MAX_ITER=$5
-NUM_WORKERS=$6
-DATASET=$7
-SPLIT=$8
-N_RUNS=$9
+SEARCH_INPUT=$4
+EVAL_LIMIT=$5
+MAX_ITER=$6
+NUM_WORKERS=$7
+DATASET=$8
+SPLIT=$9
+N_RUNS=${10}
 
 if [ -z "$NUM_WORKERS" ]; then
   NUM_WORKERS=1
@@ -91,7 +92,8 @@ function run_eval() {
     --eval-num-workers $NUM_WORKERS \
     --eval-note $eval_note \
     --dataset $DATASET \
-    --split $SPLIT"
+    --split $SPLIT \
+    --search-input $SEARCH_INPUT"
 
   if [ -n "$EVAL_LIMIT" ]; then
     echo "EVAL_LIMIT: $EVAL_LIMIT"
