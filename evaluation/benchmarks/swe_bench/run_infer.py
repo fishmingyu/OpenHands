@@ -103,11 +103,12 @@ def get_instruction(instance: pd.Series, metadata: EvalMetadata):
         f'{search_observation_result}\n'
         '</observation>\n'
         'Follow these steps to resolve the issue:\n'
-        '1. As a first step, it might be a good idea to explore the repo to familiarize yourself with its structure. Please attach great importance to the <bug_locations> and <observation> in your exploration.\n'
-        '2. Create a script to reproduce the error and execute it with `python <filename.py>` using the BashTool, to confirm the error\n'
-        '3. Edit the sourcecode of the repo to resolve the issue\n'
-        '4. Rerun your reproduce script and confirm that the error is fixed!\n'
-        '5. Think about edgecases and make sure your fix handles them as well\n'
+        '1. As a first step, it might be a good idea to explore the repo to familiarize yourself with its structure. E.g. list the files in the repo using `ls`.\n'
+        '2. Check <bug_locations> and <observation> in your exploration to understand the issue better.\n'
+        '3. Create a script to reproduce the error and execute it with `python <filename.py>` using the BashTool, to confirm the error\n'
+        '4. Edit the sourcecode of the repo to resolve the issue\n'
+        '5. Rerun your reproduce script and confirm that the error is fixed!\n'
+        '6. Think about edgecases and make sure your fix handles them as well\n'
         "Your thinking should be thorough and so it's fine if it's very long.\n"
     )
 
